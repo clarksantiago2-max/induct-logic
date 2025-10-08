@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account</title>
+  <style>
+    /* Registration-like centered styles and button styles */
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 100px;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    .btn {
+      padding: 15px 30px;
+      font-size: 18px;
+      background-color: #0078d4;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background-color: #005fa3; }
+
+    .nav-btn {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      font-size: 16px;
+      background-color: #f3f3f3;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-btn:hover { background-color: #0078d4; color: #fff; }
+
+    /* Container similar to dashboard/account sample */
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      text-align: left;
+    }
+
+    h2 { margin-bottom: 20px; color: #333; }
+
+    .info { margin-bottom: 30px; }
+    .info p { margin: 10px 0; }
+
+    /* Top-left mini profile (as in dashboard) */
+    #topProfile {
+      position: absolute;
+      top: 30px;
+      left: 50px;
+      font-size: 1.1em;
+      color: #0078d4;
+      text-align: left;
+    }
+    #topProfile img { width:64px; height:64px; border-radius:8px; margin-top:8px; object-fit:cover; border:2px solid #0078d4; display:block; }
+
+    /* Small helper for center-aligned image */
+    .center-img { text-align:center; margin-bottom: 20px; }
+    .center-img img { width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #0078d4; }
+
+    form label { display:block; margin-top:15px; font-weight:bold; }
+    form input[type="password"], form input[type="submit"] { width:100%; padding:10px; margin-top:5px; border:1px solid #ccc; border-radius:4px; }
+    form input[type="submit"] { background-color:#007bff; color:white; cursor:pointer; margin-top:20px; }
+    form input[type="submit"]:hover { background-color:#0056b3; }
+  </style>
+  <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+</head>
+<body>
+  <div id="topProfile">
+    <div id="userLabel"></div>
+    <img id="smallProfilePic" src="" alt="Profile" style="display:none;" />
+  </div>
+
+  <div class="container">
+    <h2>Account</h2>
+
+    <div class="center-img" id="largePicContainer"></div>
+
+    <div class="info" id="accountInfo">
+      <p><strong>Username:</strong> <span id="displayUsername">—</span></p>
+      <p><strong>Email:</strong> <span id="displayEmail">Not provided</span></p>
+    </div>
+
+    <hr />
+
+    <h3>Change Password</h3>
+    <form id="changePasswordForm">
+      <label for="current-password">Current Password</label>
+      <input type="password" id="current-password" name="current_password" required />
+
+      <label for="new-password">New Password</label>
+      <input type="password" id="new-password" name="new_password" required />
+
+      <label for="confirm-password">Confirm New Password</label>
+      <input type="password" id="confirm-password" name="confirm_password" required />
+
+      <input type="submit" value="Change Password" />
+    </form>
+
+    <hr />
+
+    <h3 style="text-align:center;">Change Profile Picture</h3>
+    <div style="margin-top:10px; text-align:center;">
+      <input type="file" id="newProfilePic" accept="image/*" />
+      <button class="btn" id="saveProfilePicBtn" style="margin-left:8px;">Save Picture</button>
+      <div id="picMessage" style="margin-top:8px;color:#666; text-align:center; width:100%;"></div>
+    </div>
+
+    <div style="margin-top:20px; text-align:center;">
+  <button class="btn" onclick="location.href='..\Downloads\dashboard.html'">Back to Dashboard</button>
+  <button class="btn" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Dexie DB (same schema as registration page)
+    const db = new Dexie('UserDatabase');
+    db.version(1).stores({ users: '++id,username,passwordHash,profilePic' });
+
+    async function loadAccount() {
+      // Prefer sessionStorage username (dashboard/other pages may set it). If missing, load last registered user.
+      let username = sessionStorage.getItem('username');
+      let user;
+      if (username) {
+        user = await db.users.where('username').equals(username).first();
+      } else {
+        user = await db.users.orderBy('id').last();
+      }
+
+      if (!user) {
+        document.getElementById('accountInfo').innerHTML = '<p>No registered user found.</p>';
+        return;
+      }
+
+      // Display username
+      document.getElementById('displayUsername').textContent = user.username || '—';
+      document.getElementById('userLabel').textContent = user.username || '';
+
+      // Email not collected during registration; keep placeholder
+
+      // Show profile pictures
+      if (user.profilePic) {
+        const small = document.getElementById('smallProfilePic');
+        small.src = user.profilePic;
+        small.style.display = 'block';
+
+        const largeContainer = document.getElementById('largePicContainer');
+        largeContainer.innerHTML = `<img src="${user.profilePic}" alt="Profile Picture">`;
+      }
+
+      // Store to sessionStorage so other pages can reuse it
+      try { sessionStorage.setItem('username', user.username); sessionStorage.setItem('profilePic', user.profilePic || ''); } catch (e) { /* ignore */ }
+    }
+
+    // Simple password-change handler that updates the stored passwordHash in indexedDB
+    document.getElementById('changePasswordForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const current = document.getElementById('current-password').value;
+      const nw = document.getElementById('new-password').value;
+      const conf = document.getElementById('confirm-password').value;
+
+      if (nw !== conf) { alert('New passwords do not match'); return; }
+
+      const username = sessionStorage.getItem('username');
+      if (!username) { alert('No user signed in'); return; }
+
+      const user = await db.users.where('username').equals(username).first();
+      if (!user) { alert('User not found'); return; }
+
+      // Compare hashed current password — assume same hashing as registration (SHA-256 via CryptoJS is used there)
+      // If CryptoJS isn't available, skip check and update anyway (best-effort).
+      let currentOk = true;
+      if (window.CryptoJS && user.passwordHash) {
+        const curHash = CryptoJS.SHA256(current).toString();
+        currentOk = curHash === user.passwordHash;
+      }
+      if (!currentOk) { alert('Current password is incorrect'); return; }
+
+      // Hash new password and update DB
+      let newHash = nw;
+      if (window.CryptoJS) newHash = CryptoJS.SHA256(nw).toString();
+      await db.users.update(user.id, { passwordHash: newHash });
+      alert('Password updated');
+      document.getElementById('changePasswordForm').reset();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+      sessionStorage.removeItem('username');
+      sessionStorage.removeItem('profilePic');
+      location.href = '../index.html';
+    });
+
+    loadAccount();
+
+    // Change profile picture flow
+    document.getElementById('saveProfilePicBtn').addEventListener('click', async function (e) {
+      e.preventDefault();
+      const input = document.getElementById('newProfilePic');
+      const msg = document.getElementById('picMessage');
+      if (!input.files || !input.files[0]) { msg.textContent = 'Please select an image file first.'; return; }
+      const file = input.files[0];
+      // Read as data URL
+      const dataUrl = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+
+      const username = sessionStorage.getItem('username');
+      if (!username) { msg.textContent = 'No user signed in.'; return; }
+
+      const user = await db.users.where('username').equals(username).first();
+      if (!user) { msg.textContent = 'User not found in DB.'; return; }
+
+      await db.users.update(user.id, { profilePic: dataUrl });
+      // Update UI
+      const small = document.getElementById('smallProfilePic');
+      small.src = dataUrl; small.style.display = 'block';
+      const largeContainer = document.getElementById('largePicContainer');
+      largeContainer.innerHTML = `<img src="${dataUrl}" alt="Profile Picture">`;
+      try { sessionStorage.setItem('profilePic', dataUrl); } catch (e) {}
+      msg.style.color = 'green'; msg.textContent = 'Profile picture updated.';
+      // clear file input
+      input.value = '';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Homepage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+        .btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #0078d4;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background-color: #005fa3;
+        }
+    </style>
+</head>
+<body>
+    <div style="position: absolute; top: 30px; left: 50px;">
+        <div id="userLabel" style="font-size: 1.1em; color: #0078d4;"></div>
+        <img id="profilePic" src="" alt="Profile Picture" style="display:none; width:64px; height:64px; border-radius:8px; margin-top:8px; object-fit:cover; border:2px solid #0078d4;">
+    </div>
+    <div style="position: absolute; top: 30px; right: 50px; font-size: 1.1em; color: #0078d4;" id="stopwatchLabel"></div>
+    <h1>Dashboard</h1>
+    <button class="btn" onclick="showaccount()">Show Account</button> <br> <br>
+    <button class="btn" onclick="startQuiz()">Start the Game</button> <br> <br>
+    <button class="btn" onclick="goToCredits()">Credits</button> <br> <br>
+    <button class="btn" onclick="logout()">Back to Home</button>
+</body>
+<script>
+    // Display username and profile picture
+    document.addEventListener('DOMContentLoaded', function() {
+        const username = sessionStorage.getItem('username');
+        if (username) {
+            document.getElementById('userLabel').textContent = "User: " + username;
+        }
+        const profilePic = sessionStorage.getItem('profilePic');
+        if (profilePic) {
+            const img = document.getElementById('profilePic');
+            img.src = profilePic;
+            img.style.display = "block";
+        }
+        // If stopwatch time exists, show it
+        const stopwatch = sessionStorage.getItem('stopwatch');
+        if (stopwatch) {
+            document.getElementById('stopwatchLabel').textContent = "Time: " + stopwatch;
+        }
+    });
+
+    // Stopwatch variables
+    let stopwatchInterval;
+    let startTime;
+
+    function startQuiz() {
+        // Start stopwatch
+        startTime = Date.now();
+        sessionStorage.setItem('stopwatchStart', startTime);
+        sessionStorage.removeItem('stopwatch'); // Reset previous time
+
+        // Optionally, show stopwatch running on dashboard (before redirect)
+        updateStopwatchLabel();
+        stopwatchInterval = setInterval(updateStopwatchLabel, 100);
+
+        // Shuffle questions and start quiz after a short delay
+        const questions = ['../game/q1.html', '../game/q2.html', '../game/q3.html'];
+        for (let i = questions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [questions[i], questions[j]] = [questions[j], questions[i]];
+        }
+        sessionStorage.setItem('quizOrder', JSON.stringify(questions));
+        sessionStorage.setItem('quizIndex', 0);
+
+        setTimeout(() => {
+            clearInterval(stopwatchInterval);
+            window.location.href = questions[0];
+        }, 500); // Short delay to show stopwatch start (optional)
+    }
+
+    function updateStopwatchLabel() {
+        const now = Date.now();
+        const start = sessionStorage.getItem('stopwatchStart');
+        if (start) {
+            const elapsed = now - start;
+            document.getElementById('stopwatchLabel').textContent = "Time: " + formatTime(elapsed);
+        }
+    }
+
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const tenths = Math.floor((ms % 1000) / 100);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}.${tenths}`;
+    }
+
+    function logout() {
+        sessionStorage.clear();
+        window.location.href = '../index.html';
+    }
+    function goToCredits() {
+    window.location.href = 'about.html';
+    }
+    function showaccount() {
+    window.location.href = 'account.html';
+    }
+</script>
+
+</html>
